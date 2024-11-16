@@ -1,0 +1,91 @@
+###############################################################################
+#        _       _             _   _            _____  _
+#       | |     | |           | | | |          |  __ \(_)
+#       | | ___ | |__  _ __   | |_| |__   ___  | |__) |_ _ __  _ __   ___ _ __
+#   _   | |/ _ \| '_ \| '_ \  | __| '_ \ / _ \ |  _  /| | '_ \| '_ \ / _ \ '__|
+#  | |__| | (_) | | | | | | | | |_| | | |  __/ | | \ \| | |_) | |_) |  __/ |
+#   \____/ \___/|_| |_|_| |_|  \__|_| |_|\___| |_|  \_\_| .__/| .__/ \___|_|
+#                                                       | |   | |
+#                                                       |_|   |_|
+#
+# Copyright (c) 2024 Claudio André <dev@claudioandre.slmail.me>
+#
+# This program comes with ABSOLUTELY NO WARRANTY; express or implied.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, as expressed in version 2, seen at
+# http://www.gnu.org/licenses/gpl-2.0.html
+###############################################################################
+# GitHub Action to merge the PR whose number was requested
+# More info at https://github.com/openwall/john-packages
+
+---
+name: Merge it
+
+"on":
+  workflow_dispatch:
+    inputs:
+      pullRequestNumber:
+        description: Pull request number
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  pr-data:
+    runs-on: ubuntu-latest
+    name: merge-it-data
+
+    permissions:
+      contents: write
+      pull-requests: write
+
+    outputs:
+      branch: ${{ steps.context.outputs.branch }}
+      owner: ${{ steps.context.outputs.owner }}
+      repo: ${{ steps.context.outputs.repo }}
+
+    if: github.actor == 'claudioandre-br' || github.actor == 'solardiz'
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@91182cccc01eb5e619899d80e4e971d6181294a7 # v2.10.1
+        with:
+          disable-sudo: true
+          egress-policy: block
+          allowed-endpoints: >
+            api.github.com:443
+            github.com:443
+
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Get PR info
+        id: context
+        run: |
+          gh pr checkout "$PR_URL"
+
+          BRANCH="$(gh pr view --json headRefName        --jq '.headRefName')"
+          OWNER="$(gh pr view --json headRepositoryOwner --jq '.headRepositoryOwner.login')"
+          REPO="$(gh pr view --json headRepository       --jq '.headRepository.name')"
+          {
+            echo "branch=$BRANCH"
+            echo "owner=$OWNER"
+            echo "repo=$REPO"
+          } >> "$GITHUB_OUTPUT"
+
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_URL: ${{ github.event.inputs.pullRequestNumber }}
+
+  call-merge-pr:
+    needs: [pr-data]
+    name: merge-it-run
+    uses: claudioandre-br/Test/.github/workflows/merge-pr.yml@main
+    with:
+      branch: ${{ needs.pr-data.outputs.branch }}
+      owner: ${{ needs.pr-data.outputs.owner }}
+      repo: ${{ needs.pr-data.outputs.repo }}
+      pr-url: ${{ github.event.inputs.pullRequestNumber }}
+      request: "bot: MERGE test"
