@@ -34,7 +34,6 @@ name: Merge bot
 
 jobs:
   call-merge-pr:
-    needs: [pr-data]
     name: merge-bot-run
     uses: claudioandre-br/Test/.github/workflows/merge-pr.yml@main
     with:

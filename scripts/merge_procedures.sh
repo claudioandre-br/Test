@@ -37,7 +37,7 @@ if [[ "$REQUEST" == "bot: MERGE skip" || "$REQUEST" == "bot: MERGE test" ]]; the
 fi
 
 if [[ "$REQUEST" == "bot: MERGE test" ]]; then
-	echo "I'm pretending to create a merge."
+	echo "Test mode: I'm pretending to create a merge."
 	MY_MESSAGE+="No changes will be submitted to GitHub."
 	TEST="true"
 fi
@@ -49,19 +49,24 @@ MERGE_STATUS="$(gh pr status --json mergeStateStatus --jq '.currentBranch.mergeS
 STATUS="$(echo "$MERGE_STATUS" | grep -c 'true' || true)"
 
 echo "**********************************************************************"
-echo "Approvals: $APPROVALS"
-echo "Mergeable: $MERGE_STATUS"
+echo -e "Approvals: $APPROVALS"
+echo -e "Mergeable: $MERGE_STATUS"
 echo -e "$MY_MESSAGE"
-echo "---------------"
-echo "Reviews: $REVIEWS_STATUS"
+echo -e "---------------"
+echo -e "Reviews: $REVIEWS_STATUS"
 echo "**********************************************************************"
 
+if [[ "$TEST" == 'true' ]]; then
+	echo "$(gh pr status --json latestReviews)"
+	echo "$(gh pr status --json mergeStateStatus)"
+	echo "**********************************************************************"
+fi
 git config --global user.name "Continuous Integration"
 git config --global user.email "username@users.noreply.github.com"
 DEST_BRANCH="$BRANCH"
 
 if [[ ("$APPROVALS" -ge 1 && "$STATUS" -eq 1) || "$SKIP" == 'true' || "$TEST" == 'true' ]]; then
-	if [[ false && "$OWNER" != "openwall" ]]; then
+	if [[ false == true && "$OWNER" != "openwall" ]]; then
 		echo "The PR comes from a fork."
 		DEST_BRANCH="$OWNER-$BRANCH"
 		git checkout -b "$DEST_BRANCH" main

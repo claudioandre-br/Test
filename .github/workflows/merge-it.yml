@@ -29,6 +29,10 @@ name: Merge it
       pullRequestNumber:
         description: Pull request number
         required: true
+      trial:
+        description: Run in trial mode
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -46,6 +50,7 @@ jobs:
       branch: ${{ steps.context.outputs.branch }}
       owner: ${{ steps.context.outputs.owner }}
       repo: ${{ steps.context.outputs.repo }}
+      request: ${{ steps.context.outputs.request }}
 
     if: github.actor == 'claudioandre-br' || github.actor == 'solardiz'
     steps:
@@ -69,10 +74,17 @@ jobs:
           BRANCH="$(gh pr view --json headRefName        --jq '.headRefName')"
           OWNER="$(gh pr view --json headRepositoryOwner --jq '.headRepositoryOwner.login')"
           REPO="$(gh pr view --json headRepository       --jq '.headRepository.name')"
+
+          if [[ ${{ github.event.inputs.trial }}  == "true" ]]; then
+            REQUEST="bot: MERGE test"
+          else
+            REQUEST="bot: MERGE"
+          fi
           {
             echo "branch=$BRANCH"
             echo "owner=$OWNER"
             echo "repo=$REPO"
+            echo "request=$REQUEST"
           } >> "$GITHUB_OUTPUT"
 
         env:
@@ -88,4 +100,4 @@ jobs:
       owner: ${{ needs.pr-data.outputs.owner }}
       repo: ${{ needs.pr-data.outputs.repo }}
       pr-url: ${{ github.event.inputs.pullRequestNumber }}
-      request: "bot: MERGE test"
+      request: "${{ needs.pr-data.outputs.request }}"
