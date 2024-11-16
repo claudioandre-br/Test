@@ -1,0 +1,88 @@
+###############################################################################
+#        _       _             _   _            _____  _
+#       | |     | |           | | | |          |  __ \(_)
+#       | | ___ | |__  _ __   | |_| |__   ___  | |__) |_ _ __  _ __   ___ _ __
+#   _   | |/ _ \| '_ \| '_ \  | __| '_ \ / _ \ |  _  /| | '_ \| '_ \ / _ \ '__|
+#  | |__| | (_) | | | | | | | | |_| | | |  __/ | | \ \| | |_) | |_) |  __/ |
+#   \____/ \___/|_| |_|_| |_|  \__|_| |_|\___| |_|  \_\_| .__/| .__/ \___|_|
+#                                                       | |   | |
+#                                                       |_|   |_|
+#
+# Copyright (c) 2024 Claudio André <dev@claudioandre.slmail.me>
+#
+# This program comes with ABSOLUTELY NO WARRANTY; express or implied.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, as expressed in version 2, seen at
+# http://www.gnu.org/licenses/gpl-2.0.html
+###############################################################################
+# GitHub Action that performs the actual merge
+# More info at https://github.com/openwall/john-packages
+
+---
+name: MergePR
+
+on:
+  workflow_call:
+    inputs:
+      branch:
+        description: "The name of the branch to be merged."
+        required: true
+        type: string
+      owner:
+        description: "The owner of the repository the PR comes from"
+        required: true
+        type: string
+      repo:
+        description: "The name of the repository the PR comes from"
+        required: true
+        type: string
+      pr-url:
+        description: "The number of the PR to merge"
+        required: true
+        type: string
+      request:
+        description: "The command to be executed"
+        required: false
+        type: string
+        default: "bot: MERGE"
+
+jobs:
+  merger:
+    runs-on: ubuntu-latest
+
+    if: github.actor == 'claudioandre-br' || github.actor == 'solardiz'
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@91182cccc01eb5e619899d80e4e971d6181294a7 # v2.10.1
+        with:
+          disable-sudo: true
+          egress-policy: block
+          allowed-endpoints: >
+            api.github.com:443
+            github.com:443
+
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - name: GitHub context
+        env:
+          GITHUB_CONTEXT: ${{ toJSON(github) }}
+        run: echo "$GITHUB_CONTEXT"
+
+      - name: Auto-merge PRs
+        run: |
+          export BRANCH="${{ inputs.branch }}"
+          export OWNER="${{ inputs.owner }}"
+          export REPO="${{ inputs.repo }}"
+          export PR_URL="${{ inputs.pr-url }}"
+          export REQUEST="${{ inputs.request }}"
+
+          source "./scripts/merge_procedures.sh" # @main
+
+        env:
+          GH_TOKEN: ${{ github.token }}
