@@ -1,0 +1,45 @@
+###############################################################################
+#        _       _             _   _            _____  _
+#       | |     | |           | | | |          |  __ \(_)
+#       | | ___ | |__  _ __   | |_| |__   ___  | |__) |_ _ __  _ __   ___ _ __
+#   _   | |/ _ \| '_ \| '_ \  | __| '_ \ / _ \ |  _  /| | '_ \| '_ \ / _ \ '__|
+#  | |__| | (_) | | | | | | | | |_| | | |  __/ | | \ \| | |_) | |_) |  __/ |
+#   \____/ \___/|_| |_|_| |_|  \__|_| |_|\___| |_|  \_\_| .__/| .__/ \___|_|
+#                                                       | |   | |
+#                                                       |_|   |_|
+#
+# Copyright (c) 2024 Claudio André <dev@claudioandre.slmail.me>
+#
+# This program comes with ABSOLUTELY NO WARRANTY; express or implied.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, as expressed in version 2, seen at
+# http://www.gnu.org/licenses/gpl-2.0.html
+###############################################################################
+# GitHub Action to react to PR revisions and merge PRs on request
+# More info at https://github.com/openwall/john-packages
+
+---
+name: Merge bot
+
+"on":
+  pull_request_review:
+    types:
+      - submitted
+
+    permissions:
+      contents: write
+      pull-requests: write
+
+jobs:
+  call-merge-pr:
+    needs: [pr-data]
+    name: merge-bot-run
+    uses: claudioandre-br/Test/.github/workflows/merge-pr.yml@main
+    with:
+      branch: ${{ github.event.pull_request.head.ref }}
+      owner: ${{ github.event.pull_request.head.repo.owner.login }}
+      repo: ${{ github.event.pull_request.head.repo.name }}
+      pr-url: ${{ github.event.pull_request.html_url }}
+      request: ${{ github.event.review.body }}
