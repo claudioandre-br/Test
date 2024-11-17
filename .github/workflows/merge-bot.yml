@@ -17,7 +17,7 @@
 # the Free Software Foundation, as expressed in version 2, seen at
 # http://www.gnu.org/licenses/gpl-2.0.html
 ###############################################################################
-# GitHub Action to react to PR reviews and merge PRs on request
+# GitHub Action to react to PR reviews/comments and merge PRs on request
 # More info at https://github.com/openwall/john-packages
 
 ---
@@ -27,10 +27,19 @@ name: Merge bot
   pull_request_review:
     types:
       - submitted
+  issue_comment:
+    types:
+      - created
 
 permissions:
   contents: read
 
+if: >-
+  startsWith(github.event.review.body, 'bot: MERGE') ||
+  (
+    github.event.issue.pull_request != '' &&
+    startsWith(github.event.comment.body, 'bot: MERGE')
+  )
 jobs:
   call-merge-pr:
     permissions:
@@ -44,4 +53,4 @@ jobs:
       owner: ${{ github.event.pull_request.head.repo.owner.login }}
       repo: ${{ github.event.pull_request.head.repo.name }}
       pr-url: ${{ github.event.pull_request.html_url }}
-      request: ${{ github.event.review.body }}
+      request: ${{ github.event.review.body || github.event.comment.body }}
