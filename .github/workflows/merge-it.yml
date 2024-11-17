@@ -17,7 +17,7 @@
 # the Free Software Foundation, as expressed in version 2, seen at
 # http://www.gnu.org/licenses/gpl-2.0.html
 ###############################################################################
-# GitHub Action to merge the PR whose number was requested
+# GitHub action to merge the PR whose number is requested
 # More info at https://github.com/openwall/john-packages
 
 ---
@@ -76,7 +76,7 @@ jobs:
           REPO="$(gh pr view --json headRepository       --jq '.headRepository.name')"
 
           if [[ ${{ github.event.inputs.trial }}  == "true" ]]; then
-            REQUEST="bot: MERGE test"
+            REQUEST="bot: MERGE trial"
           else
             REQUEST="bot: MERGE"
           fi

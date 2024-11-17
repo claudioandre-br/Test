@@ -29,44 +29,47 @@ if [[ "$REQUEST" != "bot: MERGE"* ]]; then
 	exit 0
 fi
 
-if [[ "$REQUEST" == "bot: MERGE skip" || "$REQUEST" == "bot: MERGE test" ]]; then
+if [[ "$REQUEST" == "bot: MERGE skip" || "$REQUEST" == "bot: MERGE trial" ]]; then
 	echo "I'm not validating the PR data in this workflow."
 	echo "All GitHub rules still apply."
 	MY_MESSAGE="I'm not validating the PR data in this workflow.\n"
 	SKIP="true"
 fi
 
-if [[ "$REQUEST" == "bot: MERGE test" ]]; then
-	echo "Test mode: I'm pretending to create a merge."
+if [[ "$REQUEST" == "bot: MERGE trial" ]]; then
+	echo "Trial mode: I'm pretending to create a merge."
 	MY_MESSAGE+="No changes will be submitted to GitHub."
-	TEST="true"
+	TRIAL="true"
 fi
-gh pr checkout "$PR_URL"
-
-REVIEWS_STATUS="$(gh pr status --json latestReviews --jq '.currentBranch.latestReviews[].state == "APPROVED"')"
+REVIEWS_STATUS="$(gh pr view "$PR_URL" --json reviewDecision --jq '.reviewDecision == "APPROVED"')"
 APPROVALS="$(echo "$REVIEWS_STATUS" | grep -c 'true' || true)"
-MERGE_STATUS="$(gh pr status --json mergeStateStatus --jq '.currentBranch.mergeStateStatus == "CLEAN"')"
+MERGE_STATUS="$(gh pr view "$PR_URL" --json mergeStateStatus --jq '.mergeStateStatus == "CLEAN"')"
 STATUS="$(echo "$MERGE_STATUS" | grep -c 'true' || true)"
 
 echo "**********************************************************************"
-echo -e "Approvals: $APPROVALS"
+echo -e "Approved: $REVIEWS_STATUS"
 echo -e "Mergeable: $MERGE_STATUS"
 echo -e "$MY_MESSAGE"
 echo -e "---------------"
 echo -e "Reviews: $REVIEWS_STATUS"
 echo "**********************************************************************"
 
-if [[ "$TEST" == 'true' ]]; then
-	echo "$(gh pr status --json latestReviews)"
-	echo "$(gh pr status --json mergeStateStatus)"
+if [[ "$TRIAL" == 'true' ]]; then
+	echo "reviewDecision: $(gh pr view "$PR_URL" --json reviewDecision)"
+	echo "mergeStateStatus: $(gh pr view "$PR_URL" --json mergeStateStatus)"
 	echo "**********************************************************************"
 fi
 git config --global user.name "Continuous Integration"
 git config --global user.email "username@users.noreply.github.com"
 DEST_BRANCH="$BRANCH"
 
-if [[ ("$APPROVALS" -ge 1 && "$STATUS" -eq 1) || "$SKIP" == 'true' || "$TEST" == 'true' ]]; then
-	if [[ false == true && "$OWNER" != "openwall" ]]; then
+if [[ "$OWNER" != "openwall" || "$GITHUB_EVENT_NAME" == "pull_request_review" ]]; then
+	echo "On forks or reviews, I can't see the status of a PR, so ignore it."
+	STATUS=1
+fi
+
+if [[ ("$APPROVALS" -ge 1 && "$STATUS" -ge 1) || "$SKIP" == 'true' ]]; then
+	if [[ "$OWNER" != "claudioandre-br" ]]; then
 		echo "The PR comes from a fork."
 		DEST_BRANCH="$OWNER-$BRANCH"
 		git checkout -b "$DEST_BRANCH" main
@@ -78,7 +81,7 @@ if [[ ("$APPROVALS" -ge 1 && "$STATUS" -eq 1) || "$SKIP" == 'true' || "$TEST" ==
 	git checkout main
 	git merge --ff-only "$DEST_BRANCH" || exit 1
 
-	if [[ "$TEST" != 'true' ]]; then
+	if [[ "$TRIAL" != 'true' ]]; then
 		git push origin main
 	else
 		echo "No new data has been submitted to be saved on GitHub."

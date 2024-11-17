@@ -17,7 +17,7 @@
 # the Free Software Foundation, as expressed in version 2, seen at
 # http://www.gnu.org/licenses/gpl-2.0.html
 ###############################################################################
-# GitHub Action to react to PR revisions and merge PRs on request
+# GitHub Action to react to PR reviews and merge PRs on request
 # More info at https://github.com/openwall/john-packages
 
 ---
@@ -28,12 +28,15 @@ name: Merge bot
     types:
       - submitted
 
+permissions:
+  contents: read
+
+jobs:
+  call-merge-pr:
     permissions:
       contents: write
       pull-requests: write
 
-jobs:
-  call-merge-pr:
     name: merge-bot-run
     uses: claudioandre-br/Test/.github/workflows/merge-pr.yml@main
     with:
