@@ -34,19 +34,25 @@ name: Merge bot
 permissions:
   contents: read
 
-if: >-
-  startsWith(github.event.review.body, 'bot: MERGE') ||
-  (
-    github.event.issue.pull_request != '' &&
-    startsWith(github.event.comment.body, 'bot: MERGE')
-  )
 jobs:
+  # if: ${{ github.event.review.body == 'bot' }} # >-
+    # startsWith(github.event.review.body, 'bot: MERGE') ||
+    # (
+    #   github.event.issue.pull_request != '' &&
+    #   startsWith(github.event.comment.body, 'bot: MERGE')
+    # )
   call-merge-pr:
     permissions:
       contents: write
       pull-requests: write
 
     name: merge-bot-run
+    if: >-
+      startsWith(github.event.review.body, 'bot: MERGE') ||
+      (
+        github.event.issue.pull_request != '' &&
+        startsWith(github.event.comment.body, 'bot: MERGE')
+      )
     uses: claudioandre-br/Test/.github/workflows/merge-pr.yml@main
     with:
       branch: ${{ github.event.pull_request.head.ref }}
