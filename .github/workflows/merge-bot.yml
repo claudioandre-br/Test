@@ -35,12 +35,6 @@ permissions:
   contents: read
 
 jobs:
-  # if: ${{ github.event.review.body == 'bot' }} # >-
-    # startsWith(github.event.review.body, 'bot: MERGE') ||
-    # (
-    #   github.event.issue.pull_request != '' &&
-    #   startsWith(github.event.comment.body, 'bot: MERGE')
-    # )
   call-merge-pr:
     permissions:
       contents: write
@@ -58,5 +52,5 @@ jobs:
       branch: ${{ github.event.pull_request.head.ref }}
       owner: ${{ github.event.pull_request.head.repo.owner.login }}
       repo: ${{ github.event.pull_request.head.repo.name }}
-      pr-url: ${{ github.event.pull_request.html_url }}
+      pr-number: ${{ github.event.pull_request.number || github.event.issue.number }}
       request: ${{ github.event.review.body || github.event.comment.body }}
