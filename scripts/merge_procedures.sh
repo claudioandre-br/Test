@@ -22,7 +22,9 @@
 # Script to control the automatic merge process
 # More info at https://github.com/openwall/john-packages
 
+APPROVALS=0
 MY_MESSAGE=""
+STATUS=0
 
 if [[ "$REQUEST" != "bot: MERGE"* ]]; then
 	echo "There is no need for a merge! Nothing to do."
@@ -41,11 +43,11 @@ if [[ "$REQUEST" == "bot: MERGE trial" ]]; then
 	MY_MESSAGE+="No changes will be submitted to GitHub."
 	TRIAL="true"
 fi
-REVIEWS_STATUS="$(gh pr view "$PR_URL" --json reviewDecision --jq '.reviewDecision == "APPROVED"')"
-APPROVALS="$(echo "$REVIEWS_STATUS" | grep -c 'true' || true)"
-MERGE_STATUS="$(gh pr view "$PR_URL" --json mergeStateStatus --jq '.mergeStateStatus == "CLEAN"')"
-STATUS="$(echo "$MERGE_STATUS" | grep -c 'true' || true)"
-APPROVALS=1
+REVIEWS_STATUS="$(gh pr view "$PR_URL" --json reviewDecision --jq '.reviewDecision')"
+MERGE_STATUS="$(gh pr view "$PR_URL" --json mergeStateStatus --jq '.mergeStateStatus')"
+test "$REVIEWS_STATUS" == "APPROVED" && APPROVALS=1
+test "$MERGE_STATUS" == "CLEAN" && STATUS=1
+
 echo "**********************************************************************"
 echo -e "Approved: $REVIEWS_STATUS"
 echo -e "Mergeable: $MERGE_STATUS"
@@ -55,12 +57,21 @@ echo "reviewDecision: $(gh pr view "$PR_URL" --json reviewDecision)"
 echo "mergeStateStatus: $(gh pr view "$PR_URL" --json mergeStateStatus)"
 echo "**********************************************************************"
 
-git config --global user.name "Continuous Integration"
-git config --global user.email "username@users.noreply.github.com"
+if [[ "$REQUEST" == "bot: MERGE skip" ]]; then
+	test "$REVIEWS_STATUS" == "APPROVED" && CCHK_1="✔"
+	test "$MERGE_STATUS" == "CLEAN" && CCHK_2="✔"
+	gh pr comment "$PR_URL" --body "
+	🤖: status
+	- reviewDecision: $REVIEWS_STATUS $CCHK_1
+	- mergeStateStatus: $MERGE_STATUS $CCHK_2
+	"
+fi
+git config --global user.name "github-actions[bot]"
+git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
 DEST_BRANCH="$BRANCH"
 
-if [[ "$OWNER" != "openwall" || "$GITHUB_EVENT_NAME" == "pull_request_review" ]]; then
-	echo "On forks or reviews, I can't see the status of a PR, so ignore it."
+if [[ "$GITHUB_EVENT_NAME" == "pull_request_review" ]]; then
+	echo "In a code review I can't see the status of the PR, so ignore it."
 	STATUS=1
 fi
 
@@ -78,7 +89,7 @@ if [[ ("$APPROVALS" -ge 1 && "$STATUS" -ge 1) || "$SKIP" == 'true' ]]; then
 	git merge --ff-only "$DEST_BRANCH" || exit 1
 
 	if [[ "$TRIAL" != 'true' ]]; then
-		git push origin main
+		echo "Fiz" # git push origin main
 	else
 		echo "No new data has been submitted to be saved on GitHub."
 	fi
